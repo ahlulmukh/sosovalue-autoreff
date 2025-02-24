@@ -93,13 +93,10 @@ export async function solveTurnstileCaptchaPuppeter() {
       disableXvfb: false,
       ignoreAllFlags: false,
     });
-
+    const delay = (ms: number | undefined) => new Promise((resolve) => setTimeout(resolve, ms));
     browser = connectedBrowser;
     await page.goto("https://sosovalue.com/");
-    const modalSelector =
-      "#root > div.MuiDialog-root.MuiModal-root.mui-style-126xj0f > div.MuiDialog-container.MuiDialog-scrollPaper.mui-style-ekeie0 > div";
-    await page.waitForSelector(modalSelector, { visible: true });
-
+    await delay(10000);
     const signUpButtonSelector =
       "#exp_top > div.flex.items-center > button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.bg-background-brand-accent-600-600.border-0.rounded.text-background-white-white.text-sm.font-semibold.cursor-pointer.py-1.px-3.ml-2.whitespace-nowrap.mui-style-1yxmbwk";
     await page.waitForSelector(signUpButtonSelector, { visible: true });
