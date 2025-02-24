@@ -21,7 +21,7 @@ export class sosoValuRefferal {
   private siteKey: string;
   private captchaMethod: string;
 
-  constructor(refCode: string, proxy: string | null = null,  captchaMethod: string = "1") {
+  constructor(refCode: string, proxy: string | null = null, captchaMethod: string = "1") {
     this.refCode = refCode;
     this.proxy = proxy;
     this.captchaMethod = captchaMethod;
@@ -97,14 +97,36 @@ export class sosoValuRefferal {
     }
   }
 
-  async sendEmailCode(email: string, password: string ){
-    logMessage(
-      null,
-      null,
-      "try solve captcha ...",
-      "process"
-    );
+  async getSessionCookies(): Promise<string | null> {
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+      "Referer": "https://sosovalue.com/",
+      "Origin": "https://sosovalue.com/",
+    }
+    try {
+      const response = await this.makeRequest("GET", "https://log.sosovalue.com/track", { headers: headers });
 
+      if (!response) {
+        logMessage(null, null, "Failed to get a response!", "error");
+        return null;
+      }
+      const rawCookies = response.headers["set-cookie"];
+      if (!rawCookies) {
+        logMessage(null, null, "No cookies received!", "error");
+        return null;
+      }
+
+      const cookies = rawCookies.map(cookie => cookie.split(";")[0]).join("; ");
+      return cookies;
+    } catch (error) {
+      logMessage(null, null, `Failed to fetch session cookies: ${(error as any).message}`, "error");
+      return null;
+    }
+  }
+
+
+  async sendEmailCode(email: string, password: string) {
+    logMessage(null, null, "Trying to solve CAPTCHA...", "process");
     let captchaResponse: string | null = null;
     if (this.captchaMethod === "1") {
       captchaResponse = await solveTurnstileCaptcha(this.siteKey, "https://sosovalue.com/");
@@ -116,39 +138,51 @@ export class sosoValuRefferal {
     }
 
     if (!captchaResponse) {
-      logMessage(null, null, "Failed to solve captcha", "error");
+      logMessage(null, null, "Failed to solve CAPTCHA", "error");
       return false;
     }
-  
-    logMessage(
-      null,
-      null,
-      "captcha solved, sending verification code...",
-      "success"
-    );
+    const sessionCookies = await this.getSessionCookies();
+    if (!sessionCookies) {
+      logMessage(null, null, "Failed to obtain session cookies", "error");
+      return false;
+    }
+
+    logMessage(null, null, "CAPTCHA solved, sending verification code...", "success");
+
+    const headers = {
+      "Content-Type": "application/json",
+      "Origin": "https://sosovalue.com",
+      Referer: "https://sosovalue.com",
+      Cookie: sessionCookies,
+    };
 
     const dataSend = {
+      email: email,
       password: password,
       rePassword: password,
       username: "NEW_USER_NAME_02",
-      email: email,
     };
-  
+
     const response = await this.makeRequest(
       "POST",
       `https://gw.sosovalue.com/usercenter/email/anno/sendRegisterVerifyCode/V2?cf-turnstile-response=${captchaResponse}`,
-      { data: dataSend }
+      {
+        data: dataSend,
+        headers: headers,
+      }
     );
-  
+
     if (response && response.data) {
-      logMessage(null, null, "Email Verification Send", "success");
+      logMessage(null, null, "Email Verification Sent", "success");
+      console.log(response.data);
       return true;
     } else {
-      return false;
+      return null;
     }
   }
 
-  async getCodeVerification(email : string) {
+
+  async getCodeVerification(email: string) {
     logMessage(
       null,
       null,
@@ -233,13 +267,13 @@ export class sosoValuRefferal {
   extractVerificationCode(content: any) {
     if (!content) return null;
     const textCodeMatch = content.match(/\[SoSoValue\] Your verification code is:\s*\n\s*(\d{6})\s*\n/);
-  
+
     if (textCodeMatch) {
       return textCodeMatch[1];
     }
     return null;
   }
-  
+
 
   async getReferralCode(token: string) {
     const headers = {
@@ -257,16 +291,16 @@ export class sosoValuRefferal {
     if (response && response.data.code == 0) {
       return response.data.data.invitationCode;
     } else {
-      logMessage(null,null, "Failed Get User Info", "error");
+      logMessage(null, null, "Failed Get User Info", "error");
       return null;
     }
 
   }
 
   async registerAccount(email: string, password: string) {
-    logMessage(null,null, "Register account...", "process");
-    const cekEmail =  await this.cekEmailValidation(email)
-    if (!cekEmail){
+    logMessage(null, null, "Register account...", "process");
+    const cekEmail = await this.cekEmailValidation(email)
+    if (!cekEmail) {
       logMessage(null, null, "Email already registered", "error");
       return null;
     }
@@ -306,13 +340,13 @@ export class sosoValuRefferal {
 
 
     if (response && response.data.code == 0) {
-      logMessage(null,null, "Register Succesfully", "success");
-      const invitationCode =  await this.getReferralCode(response.data.data.token);
+      logMessage(null, null, "Register Succesfully", "success");
+      const invitationCode = await this.getReferralCode(response.data.data.token);
       return { ...response.data, invitationCode };
     } else {
-      logMessage(null,null, "Failed Register", "error");
+      logMessage(null, null, "Failed Register", "error");
       return null;
     }
   }
-  
+
 }
