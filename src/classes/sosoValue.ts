@@ -174,7 +174,6 @@ export class sosoValuRefferal {
 
     if (response && response.data) {
       logMessage(null, null, "Email Verification Sent", "success");
-      console.log(response.data);
       return true;
     } else {
       return null;
