@@ -24,41 +24,61 @@ async function main(): Promise<void> {
   );
   const proxiesLoaded = loadProxies();
   if (!proxiesLoaded) {
-    console.log(chalk.yellow("No proxy available. Using default IP."));
+    logMessage(null, null, "No Proxy. Using default IP", "warning");
   }
-  let successful = 0;
 
   const sosoValueaccount = fs.createWriteStream("accounts.txt", { flags: "a" });
+  let successful = 0;
+  let attempt = 1;
 
-  for (let i = 0; i < count; i++) {
-    console.log(chalk.white("-".repeat(85)));
-    logMessage(i + 1, count, "Process", "debug");
-    const currentProxy = await getRandomProxy();
-    const sosoValue = new sosoValuRefferal(refCode, currentProxy, captchaMethod);
+  try {
+    while (successful < count) {
+      console.log(chalk.white("-".repeat(85)));
+      const currentProxy = await getRandomProxy(successful + 1, count);
+      const sosoValue = new sosoValuRefferal(refCode, currentProxy, captchaMethod, successful + 1, count);
+      try {
 
+        const email = sosoValue.generateTempEmail();
+        const password = generatePassword()
+        const registered = await sosoValue.registerAccount(email, password.encodedPassword);
 
-    try{
-      const email = sosoValue.generateTempEmail();
-      const password = generatePassword() 
-      const registered = await sosoValue.registerAccount(email, password.encodedPassword);
-      if(registered){
-        successful++;
-        sosoValueaccount.write(`Email Address : ${email}\n`);
-        sosoValueaccount.write(`Password : ${password.password}\n`);
-        sosoValueaccount.write(`Invitation Code : ${registered.invitationCode}\n`);
-        sosoValueaccount.write(`===================================================================\n`);
+        if (registered) {
+          sosoValueaccount.write(`Email Address : ${email}\n`);
+          sosoValueaccount.write(`Password : ${password.password}\n`);
+          sosoValueaccount.write(`Invitation Code : ${registered.invitationCode}\n`);
+          sosoValueaccount.write(`===================================================================\n`);
+          successful++;
+          attempt = 1;
+        } else {
+          logMessage(
+            successful + 1,
+            count,
+            "Register Account Failed, retrying...",
+            "error"
+          );
+          attempt++;
+        }
+      } catch (error) {
+        logMessage(
+          successful + 1,
+          count,
+          `Error: ${(error as Error).message}, retrying...`,
+          "error"
+        );
+        attempt++;
       }
-    } catch(err){
-      logMessage(i + 1, count, `Error: `, "error");
     }
+  } finally {
+    sosoValueaccount.end();
+    console.log(chalk.magenta("\n[*] Dono bang!"));
+    console.log(
+      chalk.green(`[*] Account dono ${successful} dari ${count} akun`)
+    );
+    console.log(chalk.magenta("[*] Result in accounts.txt"));
+    rl.close();
   }
 
-  sosoValueaccount.end();
-
-  console.log(chalk.magenta("\n[*] Dono bang!"));
-  console.log(chalk.green(`[*] Account dono ${successful} dari ${count} akun`));
-  console.log(chalk.magenta("[*] Result in accounts.txt"));
-  rl.close(); 
+  rl.close();
 }
 
 main().catch((err) => {

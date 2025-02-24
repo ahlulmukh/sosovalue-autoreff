@@ -3,11 +3,12 @@ import chalk from "chalk";
 import fs from "fs";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
+import { logMessage } from "../utils/logger";
 
 let proxyList: string[] = [];
 let axiosConfig: AxiosRequestConfig = {};
 
-export function getProxyAgent(proxyUrl: string): HttpsProxyAgent<any> | SocksProxyAgent | null {
+export function getProxyAgent(proxyUrl: string, index: number, total: number): HttpsProxyAgent<any> | SocksProxyAgent | null {
   try {
     const isSocks = proxyUrl.toLowerCase().startsWith("socks");
     if (isSocks) {
@@ -18,9 +19,19 @@ export function getProxyAgent(proxyUrl: string): HttpsProxyAgent<any> | SocksPro
     );
   } catch (error) {
     if (error instanceof Error) {
-      console.log(chalk.red(`[!] Error creating proxy agent: ${error.message}`));
+      logMessage(
+        index,
+        total,
+        `Error creating proxy agent: ${error.message}`,
+        "error"
+      );
     } else {
-      console.log(chalk.red(`[!] Error creating proxy agent`));
+      logMessage(
+        index,
+        total,
+        `Error creating proxy agent`,
+        "error"
+      );
     }
     return null;
   }
@@ -57,29 +68,29 @@ export function loadProxies(): boolean {
   }
 }
 
-export async function checkIP(): Promise<boolean> {
+export async function checkIP(index: number, total: number): Promise<boolean> {
   try {
     const response = await axios.get(
       "https://api.ipify.org?format=json",
       axiosConfig
     );
     const ip = response.data.ip;
-    console.log(chalk.green(`[+] Ip Using: ${ip}`));
+    logMessage(index, total, `IP Using: ${ip}`, "success");
     return true;
   } catch (error) {
     if (error instanceof Error) {
-      console.log(chalk.red(`[!] Failed to get IP: ${error.message}`));
+      logMessage(index, total, `Failed to get IP: ${error.message}`, "error");
     } else {
-      console.log(chalk.red(`[!] Failed to get IP`));
+      logMessage(index, total, `Failed to get IP`, "error");
     }
     return false;
   }
 }
 
-export async function getRandomProxy(): Promise<string | null> {
+export async function getRandomProxy(index: number, total: number): Promise<string | null> {
   if (proxyList.length === 0) {
     axiosConfig = {};
-    await checkIP();
+    await checkIP(index, total);
     return null;
   }
 
@@ -87,19 +98,19 @@ export async function getRandomProxy(): Promise<string | null> {
   while (proxyAttempt < proxyList.length) {
     const proxy = proxyList[Math.floor(Math.random() * proxyList.length)];
     try {
-      const agent = getProxyAgent(proxy);
+      const agent = getProxyAgent(proxy, index, total);
       if (!agent) continue;
 
       axiosConfig.httpsAgent = agent;
-      await checkIP();
+      await checkIP(index, total);
       return proxy;
     } catch (error) {
       proxyAttempt++;
     }
   }
 
-  console.log(chalk.red("[!] Using default IP"));
+  logMessage(index, total, "Using default IP", "warning");
   axiosConfig = {};
-  await checkIP();
+  await checkIP(index, total);
   return null;
 }
