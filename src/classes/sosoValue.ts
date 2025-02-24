@@ -47,9 +47,6 @@ export class sosoValuRefferal {
       } catch (error) {
         if (i === retries - 1) {
           logMessage(null, null, `Request failed: ${(error as any).message}`, "error");
-          if (this.proxy) {
-            logMessage(null, null, `Failed proxy: ${this.proxy}`, "error");
-          }
           return null;
         }
         logMessage(
