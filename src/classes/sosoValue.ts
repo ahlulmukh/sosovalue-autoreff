@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import fs from "fs";
 import { simpleParser } from "mailparser";
 import path from "path";
-import { solveTurnstileCaptcha, solveTurnstileCaptchaPuppeter } from "../utils/captchaServices";
+import { antiCaptcha, solveTurnstileCaptcha, solveTurnstileCaptchaPuppeter } from "../utils/captchaServices";
 import { EmailGenerator } from "../utils/generate";
 import { logMessage } from "../utils/logger";
 import { authorize } from "./authGmail";
@@ -133,6 +133,8 @@ export class sosoValuRefferal {
       captchaResponse = await solveTurnstileCaptcha(this.siteKey, "https://sosovalue.com/");
     } else if (this.captchaMethod === "2") {
       captchaResponse = await solveTurnstileCaptchaPuppeter();
+    } else if (this.captchaMethod === "3") {
+      captchaResponse = await antiCaptcha(this.siteKey, "https://sosovalue.com/");
     } else {
       logMessage(this.currentNum, this.total, "Invalid CAPTCHA method selected.", "error");
       return false;

@@ -1,5 +1,6 @@
 {
     "email": "your_email",
     "password": "your_password", // this app password, not your password email
-    "captcha2": "your_2captcha_apikey"
+    "captcha2": "your_2captcha_apikey",
+    "anticaptcha": "your_anticaptcha_apikey"
 }
